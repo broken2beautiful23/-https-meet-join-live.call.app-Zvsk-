@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Message } from '../types';
 import AiAssistant from './AiAssistant';
@@ -129,7 +128,7 @@ const MeetingRoom: React.FC<MeetingRoomProps> = ({
       <div className="h-20 bg-[#202124] flex items-center justify-between px-6 z-20">
         <div className="hidden lg:flex items-center gap-4 text-white font-medium">
            <span className="border-r border-[#5f6368] pr-4">{formattedTime}</span>
-           <span className="text-[#e8eaed]">zvs-k-meet-room</span>
+           <span className="text-[#e8eaed]">hiyk-ok-meet-room</span>
         </div>
 
         <div className="flex items-center gap-3 mx-auto lg:mx-0">
