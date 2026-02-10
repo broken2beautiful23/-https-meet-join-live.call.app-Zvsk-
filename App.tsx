@@ -1,11 +1,11 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import Lobby from './components/Lobby';
 import MeetingRoom from './components/MeetingRoom';
 import EndScreen from './components/EndScreen';
 import SignIn from './components/SignIn';
 import AdminDashboard from './components/AdminDashboard';
-import { MeetingStatus, Participant } from './types';
+import { MeetingStatus } from './types';
 
 export const HOSTS = [
   { name: "James Wilson", seed: "james" },
@@ -22,10 +22,28 @@ const App: React.FC = () => {
   const [isMicOn, setIsMicOn] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [userName, setUserName] = useState('Guest User');
-  
   const [hostIndex, setHostIndex] = useState(() => Math.floor(Math.random() * HOSTS.length));
   
   const currentHost = HOSTS[hostIndex];
+
+  // URL Hash tracking: #admin triggers login
+  useEffect(() => {
+    const checkHash = () => {
+      if (window.location.hash === '#admin') {
+        setStatus(MeetingStatus.ADMIN_LOGIN);
+      } else if (window.location.hash === '') {
+        // If user manually clears hash, go back to lobby unless they are logged in
+        if (status === MeetingStatus.ADMIN_LOGIN || status === MeetingStatus.ADMIN_DASHBOARD) {
+           setStatus(MeetingStatus.LOBBY);
+        }
+      }
+    };
+    
+    window.addEventListener('hashchange', checkHash);
+    checkHash(); // Run on initial load
+    
+    return () => window.removeEventListener('hashchange', checkHash);
+  }, [status]);
 
   const handleStartJoin = useCallback(() => {
     setStatus(MeetingStatus.SIGNING_IN);
@@ -62,7 +80,10 @@ const App: React.FC = () => {
           toggleCamera={toggleCamera}
           currentHost={currentHost}
           onCycleHost={cycleHost}
-          onAdminClick={() => setStatus(MeetingStatus.ADMIN_LOGIN)}
+          onAdminClick={() => {
+            window.location.hash = 'admin';
+            setStatus(MeetingStatus.ADMIN_LOGIN);
+          }}
         />
       )}
       {status === MeetingStatus.SIGNING_IN && (
@@ -93,7 +114,10 @@ const App: React.FC = () => {
         <AdminDashboard 
           status={status} 
           onLoginSuccess={() => setStatus(MeetingStatus.ADMIN_DASHBOARD)} 
-          onLogout={() => setStatus(MeetingStatus.LOBBY)}
+          onLogout={() => {
+            window.location.hash = '';
+            setStatus(MeetingStatus.LOBBY);
+          }}
         />
       )}
     </div>

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 
 interface LobbyProps {
@@ -107,7 +108,6 @@ const Lobby: React.FC<LobbyProps> = ({
           <button 
             onClick={onCycleHost}
             className="flex items-center gap-2 mb-8 bg-[#3c4043]/30 hover:bg-[#3c4043]/50 px-3 py-1.5 rounded-full transition-all group active:scale-95"
-            title="Click to see who else is here"
           >
              <div className="flex relative">
                <img 
@@ -118,14 +118,14 @@ const Lobby: React.FC<LobbyProps> = ({
                <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full border border-[#202124]"></div>
              </div>
              <p className="text-zinc-300 text-sm font-medium">
-               <span className="text-white font-semibold transition-colors group-hover:text-[#8ab4f8]">{currentHost.name}</span> is already in this call
+               <span className="text-white font-semibold group-hover:text-[#8ab4f8]">{currentHost.name}</span> is already in this call
              </p>
           </button>
           
           <div className="flex flex-col gap-4 w-full">
             <button 
               onClick={onJoin}
-              className="px-8 py-3 bg-[#8ab4f8] hover:bg-[#aecbfa] text-[#202124] rounded-full font-medium text-base transition-colors shadow-sm"
+              className="px-8 py-3 bg-[#8ab4f8] hover:bg-[#aecbfa] text-[#202124] rounded-full font-medium text-base transition-colors shadow-lg"
             >
               Join now
             </button>
@@ -133,25 +133,14 @@ const Lobby: React.FC<LobbyProps> = ({
               Present
             </button>
           </div>
-          
-          <div className="mt-8 text-[#9aa0a6] text-xs">
-            Other joining options: 
-            <button className="ml-1 text-[#8ab4f8] hover:underline">Use Phone for audio</button>
-          </div>
         </div>
-
       </div>
       
-      <div className="absolute bottom-6 left-6 flex items-center justify-between w-[calc(100%-48px)]">
-        <div className="text-[#9aa0a6] text-sm">
-          hiyk-meet-room
+      {/* Bottom room ID and info - Admin button removed as requested */}
+      <div className="absolute bottom-6 right-8 flex flex-col items-end opacity-20 hover:opacity-100 transition-opacity">
+        <div className="text-white text-[10px] font-bold uppercase tracking-widest">
+          Meeting ID: hiyk-meet-room
         </div>
-        <button 
-          onClick={onAdminClick}
-          className="text-[#3c4043] hover:text-[#5f6368] text-[10px] transition-colors"
-        >
-          Admin
-        </button>
       </div>
     </div>
   );
