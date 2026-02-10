@@ -20,11 +20,19 @@ const AiAssistant: React.FC<AiAssistantProps> = ({ isMicOn, hostName, onSpeaking
   const currentOutputTranscript = useRef('');
 
   useEffect(() => {
-    // Safely access API key to prevent "process is not defined" error
-    const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
+    // CRITICAL FIX: Safe access to environment variables for global deployments (USA, etc.)
+    let apiKey = '';
+    try {
+      // Check if process and process.env exist before accessing
+      if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+        apiKey = process.env.API_KEY;
+      }
+    } catch (e) {
+      console.warn("Could not access process.env safely", e);
+    }
     
     if (!apiKey) {
-      console.warn("Gemini API Key is missing. AI features will not work.");
+      console.error("Gemini API Key is missing. Check your environment variables on Vercel.");
       return;
     }
 
@@ -32,8 +40,14 @@ const AiAssistant: React.FC<AiAssistantProps> = ({ isMicOn, hostName, onSpeaking
 
     async function initLive() {
       try {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-        outputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+        const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtx) {
+          console.error("AudioContext not supported in this browser");
+          return;
+        }
+
+        audioContextRef.current = new AudioCtx({ sampleRate: 16000 });
+        outputAudioContextRef.current = new AudioCtx({ sampleRate: 24000 });
         
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
@@ -41,8 +55,9 @@ const AiAssistant: React.FC<AiAssistantProps> = ({ isMicOn, hostName, onSpeaking
           model: 'gemini-2.5-flash-native-audio-preview-12-2025',
           callbacks: {
             onopen: () => {
-              const source = audioContextRef.current!.createMediaStreamSource(stream);
-              const scriptProcessor = audioContextRef.current!.createScriptProcessor(4096, 1, 1);
+              if (!audioContextRef.current) return;
+              const source = audioContextRef.current.createMediaStreamSource(stream);
+              const scriptProcessor = audioContextRef.current.createScriptProcessor(4096, 1, 1);
               
               scriptProcessor.onaudioprocess = (e) => {
                 if (!isMicOn) return;
@@ -50,11 +65,11 @@ const AiAssistant: React.FC<AiAssistantProps> = ({ isMicOn, hostName, onSpeaking
                 const pcmBlob = createPcmBlob(inputData);
                 sessionPromise.then(session => {
                   session.sendRealtimeInput({ media: pcmBlob });
-                });
+                }).catch(err => console.error("Session send error:", err));
               };
 
               source.connect(scriptProcessor);
-              scriptProcessor.connect(audioContextRef.current!.destination);
+              scriptProcessor.connect(audioContextRef.current.destination);
             },
             onmessage: async (message: LiveServerMessage) => {
               if (message.serverContent?.inputTranscription) {
@@ -98,14 +113,16 @@ const AiAssistant: React.FC<AiAssistantProps> = ({ isMicOn, hostName, onSpeaking
               }
 
               if (message.serverContent?.interrupted) {
-                sourcesRef.current.forEach(s => s.stop());
+                sourcesRef.current.forEach(s => {
+                  try { s.stop(); } catch(e) {}
+                });
                 sourcesRef.current.clear();
                 nextStartTimeRef.current = 0;
                 onSpeakingStateChange(false);
               }
             },
-            onerror: (e) => console.error('Connection Error:', e),
-            onclose: () => console.log('Connection Closed'),
+            onerror: (e) => console.error('Gemini Live API Error:', e),
+            onclose: () => console.log('Gemini Live API Closed'),
           },
           config: {
             responseModalities: [Modality.AUDIO],
@@ -120,16 +137,20 @@ const AiAssistant: React.FC<AiAssistantProps> = ({ isMicOn, hostName, onSpeaking
 
         sessionRef.current = await sessionPromise;
       } catch (err) {
-        console.error("Initialization error:", err);
+        console.error("AI Initialization failed (check USA region availability or microphone permissions):", err);
       }
     }
 
     initLive();
 
     return () => {
-      if (sessionRef.current) sessionRef.current.close();
-      if (audioContextRef.current) audioContextRef.current.close();
-      if (outputAudioContextRef.current) outputAudioContextRef.current.close();
+      try {
+        if (sessionRef.current) sessionRef.current.close();
+        if (audioContextRef.current) audioContextRef.current.close();
+        if (outputAudioContextRef.current) outputAudioContextRef.current.close();
+      } catch (e) {
+        console.warn("Cleanup error:", e);
+      }
     };
   }, [hostName, isMicOn]);
 
