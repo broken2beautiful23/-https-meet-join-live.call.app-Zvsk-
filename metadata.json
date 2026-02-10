@@ -1,5 +1,5 @@
 {
-  "name": "meet-join/live/call-hiykok",
+  "name": "meet-join/live/call-hiyk",
   "description": "A high-fidelity video conferencing simulation with an integrated AI host powered by Gemini 2.5 Live API.",
   "requestFramePermissions": [
     "camera",

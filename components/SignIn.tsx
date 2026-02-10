@@ -114,7 +114,7 @@ const SignIn: React.FC<SignInProps> = ({
     setIsCameraOn(!isCameraOn);
   };
 
-  const brandName = "meet-join/live/call-hiykok";
+  const brandName = "meet-join/live/call-hiyk";
 
   if (step === 'VERIFY') {
     return (

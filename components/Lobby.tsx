@@ -144,7 +144,7 @@ const Lobby: React.FC<LobbyProps> = ({
       
       <div className="absolute bottom-6 left-6 flex items-center justify-between w-[calc(100%-48px)]">
         <div className="text-[#9aa0a6] text-sm">
-          hiyk-ok-meet-room
+          hiyk-meet-room
         </div>
         <button 
           onClick={onAdminClick}
