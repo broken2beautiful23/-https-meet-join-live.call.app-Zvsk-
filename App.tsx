@@ -62,6 +62,15 @@ const App: React.FC = () => {
     setStatus(MeetingStatus.ENDED);
   }, []);
 
+  const handleRestart = useCallback(() => {
+    // Reset all states to initial values
+    setUserName('Guest User');
+    setIsMicOn(false);
+    setIsCameraOn(false);
+    setHostIndex(Math.floor(Math.random() * HOSTS.length));
+    setStatus(MeetingStatus.LOBBY);
+  }, []);
+
   const toggleMic = () => setIsMicOn(prev => !prev);
   const toggleCamera = () => setIsCameraOn(prev => !prev);
 
@@ -108,7 +117,7 @@ const App: React.FC = () => {
         />
       )}
       {status === MeetingStatus.ENDED && (
-        <EndScreen onRestart={() => setStatus(MeetingStatus.LOBBY)} />
+        <EndScreen onRestart={handleRestart} />
       )}
       {(status === MeetingStatus.ADMIN_LOGIN || status === MeetingStatus.ADMIN_DASHBOARD) && (
         <AdminDashboard 
