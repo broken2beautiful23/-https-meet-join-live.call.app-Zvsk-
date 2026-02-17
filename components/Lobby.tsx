@@ -136,10 +136,10 @@ const Lobby: React.FC<LobbyProps> = ({
         </div>
       </div>
       
-      {/* Bottom room ID and info - Admin button removed as requested */}
+      {/* Bottom room ID and info */}
       <div className="absolute bottom-6 right-8 flex flex-col items-end opacity-20 hover:opacity-100 transition-opacity">
         <div className="text-white text-[10px] font-bold uppercase tracking-widest">
-          Meeting ID: hiyk-meet-room
+          Meeting ID: emw-pssw-ias
         </div>
       </div>
     </div>
