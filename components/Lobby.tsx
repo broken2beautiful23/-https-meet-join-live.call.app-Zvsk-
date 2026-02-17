@@ -42,15 +42,12 @@ const Lobby: React.FC<LobbyProps> = ({
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden bg-[#202124]">
-      {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500 rounded-full blur-[120px]"></div>
       </div>
 
       <div className="z-10 max-w-6xl w-full flex flex-col md:flex-row items-center justify-center gap-16 px-6">
-        
-        {/* Left: Camera Preview */}
         <div className="flex flex-col items-center w-full max-w-[740px]">
           <div className="relative w-full aspect-video bg-[#3c4043] rounded-lg overflow-hidden shadow-xl border border-[#5f6368] flex items-center justify-center group">
             {isCameraOn ? (
@@ -101,45 +98,30 @@ const Lobby: React.FC<LobbyProps> = ({
           </div>
         </div>
 
-        {/* Right: Join Text and Buttons */}
         <div className="flex flex-col items-center md:items-start text-center md:text-left max-w-sm">
           <h1 className="text-4xl text-white font-normal mb-6">Ready to join?</h1>
-          
           <button 
             onClick={onCycleHost}
             className="flex items-center gap-2 mb-8 bg-[#3c4043]/30 hover:bg-[#3c4043]/50 px-3 py-1.5 rounded-full transition-all group active:scale-95"
           >
              <div className="flex relative">
-               <img 
-                 src={`https://picsum.photos/seed/${currentHost.seed}/32`} 
-                 className="w-6 h-6 rounded-full border border-[#202124] transition-all" 
-                 alt={currentHost.name} 
-               />
+               <img src={`https://picsum.photos/seed/${currentHost.seed}/32`} className="w-6 h-6 rounded-full border border-[#202124]" alt={currentHost.name} />
                <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full border border-[#202124]"></div>
              </div>
              <p className="text-zinc-300 text-sm font-medium">
                <span className="text-white font-semibold group-hover:text-[#8ab4f8]">{currentHost.name}</span> is already in this call
              </p>
           </button>
-          
           <div className="flex flex-col gap-4 w-full">
-            <button 
-              onClick={onJoin}
-              className="px-8 py-3 bg-[#8ab4f8] hover:bg-[#aecbfa] text-[#202124] rounded-full font-medium text-base transition-colors shadow-lg"
-            >
-              Join now
-            </button>
-            <button className="px-8 py-3 bg-transparent border border-[#5f6368] text-[#8ab4f8] hover:bg-[#8ab4f8]/10 rounded-full font-medium text-base transition-colors">
-              Present
-            </button>
+            <button onClick={onJoin} className="px-8 py-3 bg-[#8ab4f8] hover:bg-[#aecbfa] text-[#202124] rounded-full font-medium text-base transition-colors shadow-lg">Join now</button>
+            <button className="px-8 py-3 bg-transparent border border-[#5f6368] text-[#8ab4f8] hover:bg-[#8ab4f8]/10 rounded-full font-medium text-base transition-colors">Present</button>
           </div>
         </div>
       </div>
       
-      {/* Bottom room ID and info */}
       <div className="absolute bottom-6 right-8 flex flex-col items-end opacity-20 hover:opacity-100 transition-opacity">
         <div className="text-white text-[10px] font-bold uppercase tracking-widest">
-          Meeting ID: emw-pssw-ias
+          Meeting ID: emw-call43
         </div>
       </div>
     </div>

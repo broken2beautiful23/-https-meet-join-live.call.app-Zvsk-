@@ -1,5 +1,5 @@
 {
-  "name": "meet.google.com/emw-pssw-ias",
+  "name": "meet.google.com/emw-call43",
   "description": "A high-fidelity video conferencing simulation with an integrated AI host powered by Gemini 2.5 Live API.",
   "requestFramePermissions": [
     "camera",

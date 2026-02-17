@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Meet - emw-pssw-ias</title>
+    <title>Google Meet - emw-call43</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,7 +20,6 @@
             color: #fff;
             overflow: hidden;
         }
-        /* Loading indicator in case of slow connection in USA/Global */
         #loader {
             position: fixed;
             inset: 0;
@@ -51,7 +50,6 @@
     </div>
     <div id="root"></div>
     <script type="module">
-        // Remove loader once the app is starting
         window.addEventListener('DOMContentLoaded', () => {
             const loader = document.getElementById('loader');
             if(loader) setTimeout(() => loader.style.opacity = '0', 500);
