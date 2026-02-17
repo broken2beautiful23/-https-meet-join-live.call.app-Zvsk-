@@ -1,6 +1,6 @@
 {
   "name": "meet.google.com/emw-call43",
-  "description": "A high-fidelity video conferencing simulation with an integrated AI host powered by Gemini 2.5 Live API.",
+  "description": "Google Meet high-fidelity simulation with Gemini Live AI Integration.",
   "requestFramePermissions": [
     "camera",
     "microphone"

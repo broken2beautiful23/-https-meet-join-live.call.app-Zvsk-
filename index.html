@@ -52,8 +52,12 @@
     <script type="module">
         window.addEventListener('DOMContentLoaded', () => {
             const loader = document.getElementById('loader');
-            if(loader) setTimeout(() => loader.style.opacity = '0', 500);
-            if(loader) setTimeout(() => loader.remove(), 1000);
+            if(loader) {
+                setTimeout(() => {
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.remove(), 500);
+                }, 800);
+            }
         });
     </script>
     <script type="module" src="index.tsx"></script>
